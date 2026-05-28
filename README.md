@@ -12,27 +12,28 @@ Reference architecture and decision rationale:
 
 ✅ **Vehicle detection** — YOLOv8 (n/s/m), per-class counts mapped to
 local categories (motor / mobil / bus / truk / sepeda).
-✅ **Streamlit demo app** — upload image or short clip, see annotated
-output, per-class stats, per-frame timeline.
-✅ **Modular package** — `elang/` separates detection, classes, stats
-from Phase 2/3 stubs.
+✅ **Streamlit demo app** — image / video / heatmap tabs.
+✅ **Phase 2 wired in** — ANPR (PaddleOCR), DeepSORT tracking with
+in-zone duration scoring, Folium violation heatmap, rule-based
+officer placement optimizer.
+✅ **Modular package** — `elang/` separates detection, classes, stats;
+Phase 2 modules live under `elang/stubs/` (directory kept for layout
+continuity) with lazy imports so the MVP runs without their heavy deps.
 ✅ **CPU-friendly defaults** — `yolov8n.pt`, frame stride, frame cap.
 
-## What's stubbed (Phase 2 / Phase 3)
+## Module status
 
-These modules have defined APIs and `NotImplementedError` bodies, so the
-ELANG architecture surface is visible but no broken claims are made.
-
-| Stub | Phase | Target tech | Trigger |
+| Module | Phase | Target tech | Status |
 |---|---|---|---|
-| `elang/stubs/anpr.py` | 2 | PaddleOCR + CLAHE | Indonesian plate sample set |
-| `elang/stubs/tracking.py` | 2 | DeepSORT (deep-sort-realtime) | Duration-in-zone enforcement |
-| `elang/stubs/heatmap.py` | 2 | Folium / Kepler.gl | Geo-tagged violation log |
-| `elang/stubs/crm_classifier.py` | 3 | Sentence-BERT + classifier | Labeled CRM corpus |
-| `elang/stubs/officer_optimizer.py` | 2 | Rule-based scoring | Heatmap output + coverage map |
+| `elang/detection.py` | 1 | YOLOv8 | ✅ working |
+| `elang/stubs/heatmap.py` | 2 | Folium | ✅ working (requires `folium`) |
+| `elang/stubs/officer_optimizer.py` | 2 | Rule-based | ✅ working (pure Python) |
+| `elang/stubs/tracking.py` | 2 | DeepSORT | ✅ wired (requires `deep-sort-realtime`) |
+| `elang/stubs/anpr.py` | 2 | PaddleOCR + CLAHE | ✅ wired (requires `paddleocr`, `paddlepaddle`) |
+| `elang/stubs/crm_classifier.py` | 3 | Sentence-BERT | ⏳ stub |
 
-Unlock by uncommenting the relevant lines in `requirements.txt` and
-implementing the function bodies.
+Optional Phase 2 deps are commented in `requirements.txt`; uncomment
+the ones you want to enable in the demo.
 
 ---
 
@@ -95,13 +96,13 @@ Priority tiers from `DISHUB_Case_Analysis.md`:
 
 ### MUST HAVE (80% effort) — pilot scope
 - [x] Vehicle detection + classification (motor, mobil, bus, truk)
-- [ ] ANPR — plate number recognition (PaddleOCR)
-- [ ] Duration tracking — time in restricted zone (DeepSORT)
-- [ ] Violation heatmap dashboard (Folium / Kepler.gl)
+- [x] ANPR — plate number recognition (PaddleOCR + CLAHE preprocessing)
+- [x] Duration tracking — time in restricted zone (DeepSORT + point-in-polygon)
+- [x] Violation heatmap dashboard (Folium + grid hot-zone aggregation)
 
 ### SHOULD HAVE (15% effort)
 - [ ] CRM report auto-classification (Sentence-BERT)
-- [ ] Officer / camera placement simulator (rule-based scoring)
+- [x] Officer / camera placement simulator (rule-based scoring, haversine proximity)
 
 ### NICE TO HAVE (5% effort → roadmap doc)
 - [ ] Citizen engagement app concept

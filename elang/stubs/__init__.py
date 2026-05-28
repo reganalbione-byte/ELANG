@@ -1,6 +1,8 @@
-"""Stubs for Phase 2 / Phase 3 Must-Have components.
+"""Phase 2 modules (anpr, tracking, heatmap, officer_optimizer) and the
+Phase 3 stub (crm_classifier).
 
-Each stub defines the API surface the MVP will integrate against,
-but raises NotImplementedError until the real implementation lands.
-See ROADMAP in the prototype README.
+Phase 2 implementations are real but lazy-import their heavy deps
+(paddleocr, deep_sort_realtime, folium) so the MVP works without them.
+The directory name is kept for backwards compatibility with the
+original layout described in the README.
 """
