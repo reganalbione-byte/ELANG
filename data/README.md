@@ -8,7 +8,9 @@ Media files in this folder are gitignored (see root `.gitignore`).
 python scripts/download_sample.py
 ```
 
-Downloads a public-domain sample image (`bus.jpg`, ~480 KB) for smoke testing.
+Downloads a public-domain sample image (`bus.jpg`, ~134 KB) for smoke testing.
+Re-running `scripts/smoke_test.py` after this exercises detection + ANPR
+against the saved file.
 
 ## For real demos
 
