@@ -41,6 +41,10 @@ def _get_ocr():
     if _ocr_singleton is not None:
         return _ocr_singleton
     try:
+        # On Windows, torch must be imported before cv2 to avoid an
+        # shm.dll DLL-search conflict. paddleocr pulls torch via
+        # albumentations, so we force the order here.
+        import torch  # noqa: F401
         from paddleocr import PaddleOCR
     except ImportError as e:
         raise RuntimeError(
@@ -76,7 +80,12 @@ def _is_plausible_plate(text: str) -> bool:
     if PLATE_REGEX.match(text):
         return True
     compact = text.replace(" ", "")
-    return bool(PLATE_REGEX_RELAXED.match(compact))
+    if not PLATE_REGEX_RELAXED.match(compact):
+        return False
+    # Indonesian plates always contain BOTH letters and digits.
+    has_alpha = any(c.isalpha() for c in compact)
+    has_digit = any(c.isdigit() for c in compact)
+    return has_alpha and has_digit
 
 
 def read_plate(

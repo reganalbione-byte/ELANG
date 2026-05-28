@@ -48,12 +48,30 @@ pip install -r requirements.txt
 # 2. (Optional) download a sample image
 python scripts/download_sample.py
 
-# 3. Launch the demo
+# 3. Verify everything imports + runs
+python scripts/smoke_test.py
+
+# 4. Launch the demo
 streamlit run app.py
 ```
 
 First run downloads `yolov8n.pt` (~6 MB) into the working directory.
 Subsequent runs are instant.
+
+### Enabling the optional Phase 2 modules
+
+Lines for tracking and ANPR are commented in `requirements.txt`. Uncomment
+the ones you need, then `pip install -r requirements.txt` again.
+
+**Windows install notes (battle-tested):**
+
+- **PaddleOCR 3.x is broken** on Windows-CPU (`ConvertPirAttribute2RuntimeAttribute`
+  not implemented). The requirements pin `paddleocr<3.0` + `paddlepaddle<3.0`.
+- **`torch` 2.10+** fails to load `shm.dll` on Windows when imported after
+  `cv2`. The requirements pin `torch<2.10`; `elang/stubs/anpr.py` also
+  imports `torch` before `paddleocr` to force load order.
+- Expect ~1–2 GB of dependencies once `torch` + `paddlepaddle` are both
+  in. Allow 10–15 min for a cold install.
 
 ### macOS / Linux
 
