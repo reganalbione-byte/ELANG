@@ -1,148 +1,153 @@
-# ELANG — Intelligent Traffic Enforcement (Prototype)
+# ELANG
 
-> **Electronic Enforcement & Analysis for Next-Gen traffic Governance**
-> AI Open Innovation Challenge 2026 — DISHUB DKI Jakarta, Case 1
+Traffic enforcement prototype for DKI Jakarta. Built for the AI Open Innovation Challenge 2026 (DISHUB Case 1).
 
-Reference architecture and decision rationale:
-[`../competition-analysis/DISHUB_Case_Analysis.md`](../competition-analysis/DISHUB_Case_Analysis.md)
+Detects vehicles in CCTV footage, reads plates, tracks how long they sit in restricted zones, classifies citizen complaint text, and packages violations in a format the POLRI E-TLE system can ingest.
 
----
+## What it does
 
-## What ships in this MVP
+A Streamlit app with four tabs.
 
-✅ **Vehicle detection** — YOLOv8 (n/s/m), per-class counts mapped to
-local categories (motor / mobil / bus / truk / sepeda).
-✅ **Streamlit demo app** — image / video / heatmap tabs.
-✅ **Phase 2 wired in** — ANPR (PaddleOCR), DeepSORT tracking with
-in-zone duration scoring, Folium violation heatmap, rule-based
-officer placement optimizer.
-✅ **Modular package** — `elang/` separates detection, classes, stats;
-Phase 2 modules live under `elang/stubs/` (directory kept for layout
-continuity) with lazy imports so the MVP runs without their heavy deps.
-✅ **CPU-friendly defaults** — `yolov8n.pt`, frame stride, frame cap.
+**Image tab.** Upload a single frame. YOLOv8 marks every vehicle. If PaddleOCR is installed, it also reads plates on each crop, validates them against the Indonesian TNKB format (23 region codes covering Java and Bali), and labels each read as valid, plausible but off-format, or likely false positive. An accuracy report at the bottom tallies how many of N detections produced a valid plate.
 
-## Module status
+**Video tab.** Same pipeline, three input modes:
 
-| Module | Phase | Target tech | Status |
-|---|---|---|---|
-| `elang/detection.py` | 1 | YOLOv8 | ✅ working |
-| `elang/stubs/heatmap.py` | 2 | Folium | ✅ working (requires `folium`) |
-| `elang/stubs/officer_optimizer.py` | 2 | Rule-based | ✅ working (pure Python) |
-| `elang/stubs/tracking.py` | 2 | DeepSORT | ✅ wired (requires `deep-sort-realtime`) |
-| `elang/stubs/anpr.py` | 2 | PaddleOCR + CLAHE | ✅ wired (requires `paddleocr`, `paddlepaddle`) |
-| `elang/stubs/crm_classifier.py` | 3 | Sentence-BERT | ⏳ stub |
+1. Upload File. Standard MP4 / AVI / MOV / MKV.
+2. RTSP Stream. Paste a camera URL or pick the YouTube preset if you have `yt-dlp` installed. Comes with a warning that this needs network access to the camera.
+3. Webcam. Picks a local device index (0, 1, or 2).
 
-Optional Phase 2 deps are commented in `requirements.txt`; uncomment
-the ones you want to enable in the demo.
+Optional DeepSORT tracking keeps stable IDs across frames and counts how long each track sits inside a polygon you define. Tracks that exceed a frame threshold are flagged as violators. Optional ANPR runs on every detection and produces a deduplicated "Unique Plates Detected" table at the end.
 
----
+**Heatmap tab.** Feed a CSV of `(lat, lon, hour, violation_type, count)` rows. The app aggregates them on a configurable grid (defaults to about 111m cells), renders a Folium heatmap with the top hotspots circled, and scores candidate camera placements by haversine proximity to those hotspots. Below the optimizer is the E-TLE export section: generates mock violations and offers JSON or CSV download in the POLRI envelope format.
 
-## Quick start
+**CRM Classifier tab.** Routes free-text citizen reports (the kind that come in through kanal 112 or JAKI) into six violation categories: `parkir_liar`, `pelanggaran_lampu_merah`, `kendaraan_kontrarus`, `trotoar_dipakai_kendaraan`, `jalur_busway_dilanggar`, `lain_lain`. Uses `paraphrase-multilingual-MiniLM-L12-v2` (Indonesian and English) plus a logistic regression head trained on roughly 54 seed examples. Adds an urgency label based on keyword heuristics (accident, collision, severe gridlock get marked high). Supports single text input and CSV batch.
 
-```powershell
-# 1. Install deps (Python 3.10+ recommended)
+A sidebar control records the annotated frames to MP4 as a backup. If the live demo flakes during a presentation, you have the recording.
+
+## Running it
+
+Needs Python 3.10 or newer.
+
+```
 python -m venv .venv
-.venv\Scripts\Activate.ps1
+.venv\Scripts\activate
 pip install -r requirements.txt
-
-# 2. (Optional) download a sample image
 python scripts/download_sample.py
+streamlit run app.py
+```
 
-# 3. Verify everything imports + runs
+First run downloads `yolov8n.pt` (about 6 MB) into the project root. The CRM tab downloads multilingual MiniLM weights (around 120 MB) into the HuggingFace cache on first use, then caches the trained classifier head to `elang/stubs/crm_model.pkl` so subsequent calls skip the fit step.
+
+Smoke tests before a demo:
+
+```
 python scripts/smoke_test.py
-
-# 4. Launch the demo
-streamlit run app.py
 ```
 
-First run downloads `yolov8n.pt` (~6 MB) into the working directory.
-Subsequent runs are instant.
+Exercises detection, heatmap, officer placement, tracking (if `deep-sort-realtime` is installed), and ANPR (if PaddleOCR is installed) against the sample image. Skips cleanly if optional deps are missing.
 
-### Enabling the optional Phase 2 modules
+## Optional dependencies
 
-Lines for tracking and ANPR are commented in `requirements.txt`. Uncomment
-the ones you need, then `pip install -r requirements.txt` again.
+Some modules need extra packages. They are commented in `requirements.txt`. Uncomment what you want.
 
-**Windows install notes (battle-tested):**
+* `deep-sort-realtime` for DeepSORT tracking in the Video tab.
+* `paddleocr` plus `paddlepaddle` for plate reading. Pin both to `<3.0` on Windows.
+* `yt-dlp` only if you want the YouTube preset to work in the RTSP tab.
 
-- **PaddleOCR 3.x is broken** on Windows-CPU (`ConvertPirAttribute2RuntimeAttribute`
-  not implemented). The requirements pin `paddleocr<3.0` + `paddlepaddle<3.0`.
-- **`torch` 2.10+** fails to load `shm.dll` on Windows when imported after
-  `cv2`. The requirements pin `torch<2.10`; `elang/stubs/anpr.py` also
-  imports `torch` before `paddleocr` to force load order.
-- Expect ~1–2 GB of dependencies once `torch` + `paddlepaddle` are both
-  in. Allow 10–15 min for a cold install.
+Phase 3 packages (`sentence-transformers`, `scikit-learn`) ship uncommented so the CRM Classifier tab works without extra setup.
 
-### macOS / Linux
+### Windows install notes
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-streamlit run app.py
-```
+Two things broke during development and are worth knowing.
 
----
+1. PaddleOCR 3.x fails on Windows CPU with `ConvertPirAttribute2RuntimeAttribute not implemented`. The requirements file pins paddle to `<3.0`.
+2. `torch>=2.10` fails to load `shm.dll` if `cv2` is imported first. The ANPR module imports torch before paddleocr to force the right load order.
+
+Expect 1 to 2 GB of dependencies once torch and paddlepaddle are both installed. Cold install takes 10 to 15 minutes.
 
 ## Project layout
 
 ```
 elang-prototype/
-├── app.py                       # Streamlit entry point
-├── elang/
-│   ├── detection.py             # YOLOv8 wrapper (WORKING)
-│   ├── classes.py               # COCO -> local label mapping (WORKING)
-│   ├── stats.py                 # aggregation helpers (WORKING)
-│   └── stubs/                   # Phase 2 / 3 placeholders
-│       ├── anpr.py
-│       ├── tracking.py
-│       ├── heatmap.py
-│       ├── crm_classifier.py
-│       └── officer_optimizer.py
-├── scripts/
-│   └── download_sample.py
-├── data/                        # gitignored; demo media lives here
-├── requirements.txt
-└── README.md
+  app.py                Streamlit entry point. Four tabs plus sidebar recording.
+  elang/
+    detection.py        YOLOv8 wrapper.
+    classes.py          COCO ID to local label mapping.
+    stats.py            Aggregation helpers.
+    stubs/
+      anpr.py           PaddleOCR plus CLAHE / Otsu preprocessing plus plate validation.
+      tracking.py       DeepSORT plus point-in-polygon zone scoring.
+      heatmap.py        Folium grid hot zone aggregation.
+      officer_optimizer.py   Rule-based candidate scoring with haversine distance.
+      crm_classifier.py Multilingual Sentence-BERT plus logistic regression.
+      etle.py           JSON and CSV export adapter in POLRI envelope format.
+  scripts/
+    download_sample.py  Pull a public-domain sample image into data/.
+    smoke_test.py       End-to-end module smoke checks.
+  data/                 Sample media and saved demo recordings. Gitignored.
+  requirements.txt
+  pyrightconfig.json    Points Pylance at .venv.
+  README.md
 ```
 
----
+## ANPR accuracy
 
-## Roadmap
+The plate reader is honest about its limits.
 
-Priority tiers from `DISHUB_Case_Analysis.md`:
+Default preprocessing is CLAHE plus a bilateral filter. This works fine on whole vehicle crops at typical CCTV resolution. For tight plate ROIs where you already cropped to the plate, switch to Otsu mode in the dropdown. Otsu upscales small crops to at least 200 px wide, then thresholds and runs morphological open / close to clean up.
 
-### MUST HAVE (80% effort) — pilot scope
-- [x] Vehicle detection + classification (motor, mobil, bus, truk)
-- [x] ANPR — plate number recognition (PaddleOCR + CLAHE preprocessing)
-- [x] Duration tracking — time in restricted zone (DeepSORT + point-in-polygon)
-- [x] Violation heatmap dashboard (Folium + grid hot-zone aggregation)
+Validation checks the OCR output against 23 Indonesian region codes and four plate types:
 
-### SHOULD HAVE (15% effort)
-- [ ] CRM report auto-classification (Sentence-BERT)
-- [x] Officer / camera placement simulator (rule-based scoring, haversine proximity)
+* `reguler`, the standard civilian format like `B 1234 XYZ`.
+* `TNI_POLRI`, prefix `RI` followed by digits.
+* `dinas`, prefix `CD` or `CC` for diplomatic and consular vehicles.
+* `sementara`, anything plausible by shape but outside the strict format.
 
-### NICE TO HAVE (5% effort → roadmap doc)
-- [ ] Citizen engagement app concept
-- [ ] Multi-city scalability vision
-- [ ] Predictive violation forecasting
+Realistic accuracy target: about 85 percent on daytime CCTV with the plate facing the camera, dropping to around 65 percent on adverse conditions (night, rain, sharp angle, motorcycle plates). The Image tab surfaces this number per batch so reviewers see the same figure you do.
 
----
+## E-TLE envelope
 
-## Notes for the demo
+JSON output:
 
-- **Adverse conditions** — CLAHE preprocessing (Phase 2 ANPR stub) is the
-  designated mitigation for night / rain footage. Until then, report
-  accuracy honestly: 85% ideal / 65% adverse, per the analysis.
-- **Demo backup** — never rely on live inference at presentation; record
-  a pre-rendered run to MP4 as fallback.
-- **GPU** — swap `yolov8n.pt` for `yolov8m.pt` or `yolov8l.pt` when a
-  CUDA device is available (4–8× accuracy gain on small vehicles).
+```
+{
+  "version": "1.0",
+  "source": "ELANG",
+  "export_timestamp": "ISO 8601 UTC",
+  "total_records": 10,
+  "violations": [
+    {
+      "violation_id": "uuid",
+      "timestamp": "ISO 8601",
+      "plate_number": "B 1234 XYZ",
+      "vehicle_class": "motor | mobil | bus | truk",
+      "violation_type": "parkir_liar | jalur_busway | berhenti_sembarangan",
+      "location_lat": -6.2088,
+      "location_lon": 106.8456,
+      "camera_id": "ETLE-JKT-001",
+      "duration_seconds": 120,
+      "confidence_score": 0.92,
+      "evidence_frame_path": "evidence/ETLE-JKT-001/uuid.jpg",
+      "status": "pending"
+    }
+  ]
+}
+```
 
----
+CSV has one row per violation with the same field names as header.
+
+In production the violation list comes from the track violator output in the Video tab combined with the ANPR plate reads. The Heatmap tab currently uses the mock generator for demo purposes.
+
+## Demo tips
+
+RTSP streams need network access to the camera. Venues are unpredictable. Test the URL beforehand and have a recorded backup.
+
+Before going on stage, hit Start Recording in the sidebar, run the Video tab against your best clip, then Stop and Save. The MP4 lives in `data/demo_recording_YYYYMMDD_HHMMSS.mp4` at 15 fps with a 500 frame cap. If the live demo fails, switch to Upload File mode and play the recorded file.
+
+The Heatmap tab has an inline sample CSV so it works without any input at all, which is useful when the network is down.
+
+GPU helps a lot. Swap `yolov8n.pt` for `yolov8m.pt` or `yolov8l.pt` if you have CUDA. Small vehicle accuracy goes up roughly 4x to 8x.
 
 ## License
 
-TBD before public submission. The competition rules require all
-third-party assets to be license-compatible — verify YOLOv8 (AGPL-3.0)
-implications for your submission category before publishing.
+To be decided before submission. YOLOv8 is AGPL-3.0, which has implications for redistribution. Verify the competition rules before publishing.

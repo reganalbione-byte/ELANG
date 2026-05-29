@@ -23,7 +23,10 @@ folium>=0.15.0
 # torch>=2.4,<2.10
 # torchvision>=0.19,<0.25
 
-# Phase 3 — CRM classifier (still stub)
-# sentence-transformers>=2.2.2
-# scikit-learn>=1.3.0
+# Phase 3 — CRM classifier
+sentence-transformers>=2.2.2
+scikit-learn>=1.3.0
 # keplergl>=0.3.2
+
+# Demo / live-stream support (optional)
+# yt-dlp>=2024.1.0  # optional, for YouTube stream testing in RTSP tab

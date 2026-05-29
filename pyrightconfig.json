@@ -1,0 +1,8 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "include": ["app.py", "elang", "scripts"],
+  "exclude": [".venv", "**/__pycache__", "**/.git"],
+  "reportMissingImports": "warning",
+  "pythonVersion": "3.10"
+}
