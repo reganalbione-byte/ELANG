@@ -44,7 +44,9 @@ Smoke tests before a demo:
 python scripts/smoke_test.py
 ```
 
-Exercises detection, heatmap, officer placement, tracking (if `deep-sort-realtime` is installed), and ANPR (if PaddleOCR is installed) against the sample image. Skips cleanly if optional deps are missing.
+Exercises detection, heatmap, officer placement, tracking (if `deep-sort-realtime` is installed), ANPR (if PaddleOCR is installed), and the CRM classifier (if `sentence-transformers` is installed) against the sample image. Each check reports PASS / FAIL / SKIP; missing optional deps report SKIP and do **not** fail the run (exit code stays 0). The process exits non-zero only on a real FAIL/ERROR.
+
+For a full hands-on walkthrough — what each module does, how to operate every tab, and the pre-demo test checklist — see `OPERATING_GUIDE.md`.
 
 ## Optional dependencies
 
@@ -87,7 +89,8 @@ elang-prototype/
   data/                 Sample media and saved demo recordings. Gitignored.
   requirements.txt
   pyrightconfig.json    Points Pylance at .venv.
-  README.md
+  README.md             Architecture + install notes (prose).
+  OPERATING_GUIDE.md    Function / how to operate / how to test (hands-on).
 ```
 
 ## ANPR accuracy

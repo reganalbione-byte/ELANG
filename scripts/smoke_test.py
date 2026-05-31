@@ -1,8 +1,14 @@
 """End-to-end smoke test for ELANG modules.
 
-Runs each Phase 2 module against synthetic / real inputs and prints
-pass/fail. Designed to be runnable without DeepSORT or PaddleOCR
-installed — those checks skip cleanly with a note.
+Runs each Phase 2 / Phase 3 module against synthetic / real inputs and
+prints PASS / FAIL / SKIP. Designed to be runnable without the optional
+deps (DeepSORT, PaddleOCR, sentence-transformers) installed — those
+checks return SKIP, which does not fail the overall run.
+
+A check returns:
+    True   -> PASS   (ran and met its assertion)
+    False  -> FAIL   (ran but the assertion failed)
+    SKIP   -> SKIP   (couldn't run; optional dep or sample missing)
 
 Usage:
     python scripts/smoke_test.py
@@ -21,6 +27,9 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 SAMPLE = ROOT / "data" / "sample.jpg"
 
+# Sentinel for "could not run, but that's OK" (optional dep / missing input).
+SKIP = "SKIP"
+
 
 def _section(title: str) -> None:
     print(f"\n=== {title} ===")
@@ -30,7 +39,7 @@ def check_detection() -> bool:
     _section("detection (YOLOv8)")
     if not SAMPLE.exists():
         print(f"SKIP: {SAMPLE} not found — run scripts/download_sample.py first.")
-        return False
+        return SKIP
     from elang.detection import detect_vehicles
     img = cv2.imread(str(SAMPLE))
     dets = detect_vehicles(img, conf=0.4)
@@ -90,7 +99,7 @@ def check_tracking() -> bool:
         tracker._ensure_impl()
     except RuntimeError as e:
         print(f"SKIP: {e}")
-        return True
+        return SKIP
 
     from elang.detection import Detection
     frame = np.zeros((480, 640, 3), dtype=np.uint8)
@@ -117,10 +126,12 @@ def check_anpr() -> bool:
         from elang.stubs.anpr import preprocess_adverse, read_plate, _is_plausible_plate
     except Exception as e:
         print(f"SKIP import: {e}")
-        return False
+        return SKIP
 
-    print(f"plausible('B 1234 XYZ') = {_is_plausible_plate('B 1234 XYZ')}")
-    print(f"plausible('JUNK_TEXT_HERE') = {_is_plausible_plate('JUNK_TEXT_HERE')}")
+    # Pure-logic checks run even without PaddleOCR installed.
+    assert _is_plausible_plate("B 1234 XYZ") is True
+    assert _is_plausible_plate("JUNK_TEXT_HERE") is False
+    print("plausible-plate logic: OK")
 
     if SAMPLE.exists():
         crop = cv2.imread(str(SAMPLE))
@@ -132,9 +143,45 @@ def check_anpr() -> bool:
             result = read_plate(cv2.imread(str(SAMPLE)), min_confidence=0.5)
             print(f"read_plate result: {result}")
     except RuntimeError as e:
-        print(f"SKIP runtime: {e}")
-        return True
+        print(f"SKIP runtime (OCR engine unavailable): {e}")
+        return SKIP
     return True
+
+
+def check_crm():
+    _section("CRM classifier (Sentence-BERT)")
+    try:
+        import sentence_transformers  # noqa: F401
+        import sklearn  # noqa: F401
+        from elang.stubs.crm_classifier import (
+            CATEGORIES,
+            classify_batch,
+            classify_report,
+        )
+    except Exception as e:
+        print(f"SKIP import (optional Phase 3 deps): {e}")
+        return SKIP
+
+    print(f"categories: {CATEGORIES}")
+    samples = [
+        ("Ada motor parkir di atas trotoar depan Indomaret", "parkir_liar"),
+        ("Mobil pribadi masuk jalur busway di Sudirman", "jalur_busway_dilanggar"),
+        ("Kecelakaan parah motor vs truk di Cawang, ada korban", None),  # urgency=high
+    ]
+    single = classify_report(samples[0][0])
+    print(f"  single -> {single.predicted_category} "
+          f"({single.confidence:.0%}, urgency={single.urgency})")
+
+    results = classify_batch([t for t, _ in samples])
+    for r in results:
+        print(f"  batch  -> {r.predicted_category:28s} "
+              f"({r.confidence:.0%}, urgency={r.urgency})")
+
+    # Assertions: every report routes to a known category, and the
+    # accident report is flagged high-urgency.
+    all_known = all(r.predicted_category in CATEGORIES for r in results)
+    accident_high = results[2].urgency == "high"
+    return all_known and accident_high
 
 
 CHECKS = [
@@ -143,6 +190,7 @@ CHECKS = [
     ("optimizer", check_optimizer),
     ("tracking", check_tracking),
     ("anpr", check_anpr),
+    ("crm", check_crm),
 ]
 
 
@@ -151,15 +199,26 @@ def main() -> int:
     results: dict[str, str] = {}
     for name, fn in CHECKS:
         try:
-            ok = fn()
-            results[name] = "PASS" if ok else "FAIL"
+            outcome = fn()
+            if outcome == SKIP:
+                results[name] = "SKIP"
+            else:
+                results[name] = "PASS" if outcome else "FAIL"
         except Exception as e:
             results[name] = f"ERROR: {type(e).__name__}: {e}"
             traceback.print_exc()
     print("\n=== summary ===")
     for k, v in results.items():
         print(f"  {k:12s} {v}")
-    return 0 if all(v == "PASS" for v in results.values()) else 1
+
+    failed = [k for k, v in results.items() if v not in ("PASS", "SKIP")]
+    passed = sum(1 for v in results.values() if v == "PASS")
+    skipped = sum(1 for v in results.values() if v == "SKIP")
+    print(f"\n{passed} passed, {skipped} skipped, {len(failed)} failed.")
+    if failed:
+        print(f"Failures: {', '.join(failed)}")
+    # Exit non-zero only on real FAIL / ERROR; SKIP is acceptable.
+    return 0 if not failed else 1
 
 
 if __name__ == "__main__":

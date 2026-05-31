@@ -186,26 +186,7 @@ with st.sidebar:
         min_value=1, max_value=30, value=5,
         help="Process every Nth frame.",
     )
-    st.markdown("---")
-    st.markdown("**Phase 2 modules**")
-    st.markdown(
-        f"- ANPR (PaddleOCR): {'✅ available' if _ANPR_OK else '⚠️ optional — install paddleocr'}\n"
-        f"- Tracking (DeepSORT): {'✅ available' if _TRACKING_OK else '⚠️ optional — install deep-sort-realtime'}\n"
-        f"- Heatmap (Folium): ✅ available when folium installed\n"
-        f"- Officer optimizer: ✅ pure-Python, always on"
-    )
-    st.markdown("**Phase 3 modules**")
-    st.markdown(
-        f"- CRM classifier (Sentence-BERT): "
-        f"{'✅ available' if _CRM_OK else '⚠️ optional — install sentence-transformers + scikit-learn'}"
-    )
-
-    st.markdown("---")
-    st.markdown("**🎬 Demo Recording**")
-    st.caption(
-        "Rekam demo terbaik sebagai backup sebelum presentasi ke juri. "
-        f"Max {_RECORDING_MAX_FRAMES} frames; frame diambil dari tab Video saat preview update."
-    )
+    
     _rec_active = st.session_state.get("recording", False)
     _rec_count = len(st.session_state.get("recording_frames", []))
 
@@ -368,7 +349,7 @@ with tab_image:
         annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
         col1, col2 = st.columns([2, 1])
         with col1:
-            st.image(annotated_rgb, caption="Detections", use_column_width=True)
+            st.image(annotated_rgb, caption="Detections", use_container_width=True)
         with col2:
             summary = summarise(detections)
             st.metric("Total vehicles", summary["total"])
@@ -395,11 +376,11 @@ with tab_image:
                 pc1, pc2 = st.columns(2)
                 with pc1:
                     st.image(cv2.cvtColor(sample_crop, cv2.COLOR_BGR2RGB),
-                             caption="Original crop", use_column_width=True)
+                             caption="Original crop", use_container_width=True)
                 with pc2:
                     st.image(cv2.cvtColor(processed, cv2.COLOR_BGR2RGB),
                              caption=f"After enhance_mode='{enhance_mode}'",
-                             use_column_width=True)
+                             use_container_width=True)
 
         if do_anpr and _ANPR_OK and plate_validations:
             st.subheader("Plate validation")
@@ -685,14 +666,14 @@ with tab_video:
                         annotated_bgr = _draw_tracks(frame, tracks, zone_polygon)
                         preview_slot.image(
                             cv2.cvtColor(annotated_bgr, cv2.COLOR_BGR2RGB),
-                            caption=f"Frame {frame_idx}", use_column_width=True,
+                            caption=f"Frame {frame_idx}", use_container_width=True,
                         )
                         _append_to_recording(annotated_bgr)
                 elif processed % 3 == 0:
                     annotated_bgr = _draw(frame, dets)
                     preview_slot.image(
                         cv2.cvtColor(annotated_bgr, cv2.COLOR_BGR2RGB),
-                        caption=f"Frame {frame_idx}", use_column_width=True,
+                        caption=f"Frame {frame_idx}", use_container_width=True,
                     )
                     _append_to_recording(annotated_bgr)
 
@@ -805,7 +786,7 @@ with tab_video:
                         preview_slot.image(
                             cv2.cvtColor(annotated_bgr, cv2.COLOR_BGR2RGB),
                             caption=f"Frame {frame_idx}",
-                            use_column_width=True,
+                            use_container_width=True,
                         )
                     _append_to_recording(annotated_bgr)
                     processed += 1
@@ -874,10 +855,10 @@ with tab_heatmap:
                     df["count"] = 1
                 points = [
                     ViolationPoint(
-                        lat=float(r.lat), lon=float(r.lon), hour=int(r.hour),
-                        violation_type=str(r.violation_type), count=int(r["count"]),
+                        lat=float(r["lat"]), lon=float(r["lon"]), hour=int(r["hour"]),
+                        violation_type=str(r["violation_type"]), count=int(r["count"]),
                     )
-                    for r in df.itertuples(index=False)
+                    for r in df.to_dict("records")
                 ]
 
                 zones = hot_zones(points, top_k=int(top_k), grid_size=float(grid_size))
