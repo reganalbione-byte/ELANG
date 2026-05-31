@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.vscode/
+*.docx
+# large/sample media (model weights download at runtime)
+data/*.mp4
+data/*.avi
+data/*.mov
+data/*.mkv
+data/*.jpg
+data/*.jpeg
+data/*.png
+*.pt
+*.onnx
+elang/stubs/crm_model.pkl

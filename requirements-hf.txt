@@ -1,0 +1,14 @@
+# Hugging Face Spaces (free CPU) — lightweight hosted stack.
+# Excludes paddleocr/paddlepaddle (ANPR) to keep the build small and fast;
+# torch is still pulled in transitively by ultralytics + sentence-transformers,
+# so detection, tracking, heatmap, E-TLE export, and CRM all work.
+streamlit>=1.30.0
+ultralytics>=8.1.0
+opencv-python-headless>=4.8.0
+pillow>=10.0.0
+numpy>=1.24.0
+pandas>=2.0.0
+folium>=0.15.0
+deep-sort-realtime>=1.3.2
+sentence-transformers>=2.2.2
+scikit-learn>=1.3.0
