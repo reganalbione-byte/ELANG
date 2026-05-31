@@ -1,10 +1,10 @@
-# 🦅 ELANG — Intelligent Traffic Enforcement
+#  ELANG  Intelligent Traffic Enforcement
 
 **Electronic Enforcement & Analysis for Next-Gen traffic Governance**
 
 A working proof-of-concept that turns a city's *existing* CCTV network into an
 automated traffic-violation detection and analysis system. Built for the **AI Open
-Innovation Challenge 2026** (DISHUB DKI Jakarta — Case 1: Intelligent Traffic
+Innovation Challenge 2026** (DISHUB DKI Jakarta  Case 1: Intelligent Traffic
 Enforcement & Behaviour Analysis).
 
 `Python 3.10+` · `Streamlit` · `YOLOv8 · PaddleOCR · DeepSORT · Sentence-BERT` · Status: **working POC, CPU-verified**
@@ -13,14 +13,14 @@ Enforcement & Behaviour Analysis).
 
 ## The problem
 
-Jakarta doesn't lack traffic rules — it lacks the capacity to enforce them. Officers
+Jakarta doesn't lack traffic rules,  it lacks the capacity to enforce them. Officers
 can't be everywhere at once, violations happen in seconds, and the city's extensive
 CCTV and E-TLE infrastructure is barely used for *automated* detection. The footage
 exists; the intelligence layer to act on it does not.
 
 ELANG is that layer. It watches the cameras that are already there, flags violations
 with timestamped evidence, maps where and when discipline breaks down, and packages
-everything in a format the existing E-TLE ticketing pipeline can ingest — complementing
+everything in a format the existing E-TLE ticketing pipeline can ingest, complementing
 Dishub's tools rather than replacing them.
 
 ---
@@ -66,11 +66,11 @@ then caches a trained classifier head locally so later calls skip training.
 
 ### Try it in two minutes
 
-- **Heatmap** — upload `data/sample_violations.csv` (included). You'll get a Jakarta
+- **Heatmap**  upload `data/sample_violations.csv` (included). You'll get a Jakarta
   hotspot map, a ranked placement table, and a downloadable E-TLE export.
-- **CRM** — switch to *Batch (CSV)* and upload `data/sample_crm_reports.csv` (included)
+- **CRM**  switch to *Batch (CSV)* and upload `data/sample_crm_reports.csv` (included)
   for a categorised table, distribution chart, and urgency breakdown.
-- **Image / Video** — drop in any traffic photo or clip. (Sample media is intentionally
+- **Image / Video**  drop in any traffic photo or clip. (Sample media is intentionally
   not committed; see *Notes on data* below.)
 
 A click-by-click walkthrough of every tab lives in [`DEMO_GUIDE.md`](DEMO_GUIDE.md), and
@@ -84,12 +84,12 @@ The core app (detection, heatmap, optimizer, E-TLE export, CRM) runs out of the 
 Three features are heavier and ship **commented** in `requirements.txt` — uncomment what
 you need:
 
-- **ANPR** — `paddleocr` + `paddlepaddle` (pin both `<3.0` on Windows).
-- **DeepSORT tracking** — `deep-sort-realtime`.
-- **YouTube stream preset** — `yt-dlp`.
+- **ANPR**  `paddleocr` + `paddlepaddle` (pin both `<3.0` on Windows).
+- **DeepSORT tracking**  `deep-sort-realtime`.
+- **YouTube stream preset**  `yt-dlp`.
 
 Every optional module is lazy-imported, so the app and the rest of the package stay
-usable even when a dependency isn't installed — the feature simply reports as unavailable.
+usable even when a dependency isn't installed, the feature simply reports as unavailable.
 
 ### Windows install notes
 
@@ -113,7 +113,7 @@ python scripts/smoke_test.py
 
 This exercises all six modules against real and synthetic inputs and prints a
 `PASS / SKIP / FAIL` summary. Missing optional dependencies report **SKIP** (not a
-failure), so the run is CI-safe even on a minimal install — it exits non-zero only on a
+failure), so the run is CI-safe even on a minimal install, it exits non-zero only on a
 genuine fault.
 
 ---
@@ -133,7 +133,7 @@ We'd rather be honest than impressive:
 
 This POC runs YOLOv8-**nano** on CPU for portability; production deployment targets
 YOLOv8-L / YOLOv11 on GPU. Angkot detection is on the roadmap via Indonesian-specific
-fine-tuning — the current model covers car, motorcycle, bus, and truck from COCO weights.
+fine-tuning, the current model covers car, motorcycle, bus, and truck from COCO weights.
 
 ---
 
@@ -178,7 +178,7 @@ elang-prototype/
 ### Notes on data
 
 Sample **CSVs** for the Heatmap and CRM tabs are committed so reviewers can test
-immediately. Sample **images and video are not** — they're gitignored to keep the repo
+immediately. Sample **images and video are not**, they're gitignored to keep the repo
 light and to avoid redistributing third-party footage. Run `scripts/download_sample.py`
 for a sample frame, or simply upload your own.
 
