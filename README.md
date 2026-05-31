@@ -73,9 +73,6 @@ then caches a trained classifier head locally so later calls skip training.
 - **Image / Video**  drop in any traffic photo or clip. (Sample media is intentionally
   not committed; see *Notes on data* below.)
 
-A click-by-click walkthrough of every tab lives in [`DEMO_GUIDE.md`](DEMO_GUIDE.md), and
-a deeper operating/testing reference in [`OPERATING_GUIDE.md`](OPERATING_GUIDE.md).
-
 ---
 
 ## Optional capabilities
@@ -170,9 +167,10 @@ elang-prototype/
 │   ├── download_sample.py     fetch a public-domain sample image
 │   └── smoke_test.py          end-to-end module checks
 ├── data/                      sample CSVs (media is gitignored — see below)
-├── DEMO_GUIDE.md              per-tab screenshot walkthrough
-├── OPERATING_GUIDE.md         function / operate / test reference
-└── requirements.txt
+├── Dockerfile                 Hugging Face Spaces (Docker) image
+├── DEPLOY_HF.md               deploy steps for Hugging Face Spaces
+├── requirements.txt
+└── requirements-hf.txt        slim dependency set for the hosted demo
 ```
 
 ### Notes on data
